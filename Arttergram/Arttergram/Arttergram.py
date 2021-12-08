@@ -1,18 +1,39 @@
-import twitter
+import tweepy
+import requests
+import webbrowser
+import time
+import sys
+import socket
+import json
 
 consumerKey = ''
 consumerSecret = ''
 accessTokenKey = ''
 accessTokenSecret = ''
 
-# Generate an API from given keys.
-api = twitter.Api(consumer_key = consumerKey, 
-                  consumer_secret = consumerSecret, 
-                  access_token_key = accessTokenKey, 
-                  access_token_secret = accessTokenSecret);
+auth = tweepy.OAuthHandler(consumerKey, consumerSecret)
 
-print(api.VerifyCredentials())
+try:
+    authRedirect = auth.get_authorization_url()
+except (Tweepy.TweepError):
+    print("Couldn't get authorization URL!")
+    
+webbrowser.open(authRedirect)
 
-api.PostUpdate(caption)
+serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+serverSocket.bind(('127.0.0.1', 5656))
+serverSocket.listen(5)
 
-mediaID = api.UploadMediaChunked(artName)
+notVerified = True
+test = []
+while (notVerified):
+    csock, caddr = serverSocket.accept()
+    print ("Connection from: " + repr(caddr))
+    data = csock.recv(4096)
+    test.append(data)
+    print (testData)
+
+try:
+    auth.get_access_token(authcode)
+except (Tweepy.TweepError):
+    print("Bad authentication attempt!")
