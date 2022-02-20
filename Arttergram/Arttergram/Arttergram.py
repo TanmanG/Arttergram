@@ -6,17 +6,14 @@ import webbrowser
 import socket
 
 # Tweepy Setup
-def CreateTwitterAPI():
-    # Key Declarations, keys belong to the API program on the dev side.
-    consumerKey = '' # API Key here
-    consumerSecret = '' # API Key Secret here
+def CreateTwitterAPI(consumerKey, consumerSecret):
 
     # Declare the handler.
     handler = tweepy.OAuth1UserHandler(consumerKey, consumerSecret)
     
     # Attempt to use existing token.
-    if (exists('serializedAPI.txt')):
-            with open("seralizedAPI.txt", "rb") as tokenFile:
+    if (exists('twitterAPISerial.txt')):
+            with open("twitterAPISerial.txt", "rb") as tokenFile:
                 apiSerialized = tokenFile.read()
                 api = pickle.loads(apiSerialized)
     else:
@@ -76,22 +73,51 @@ def CreateTwitterAPI():
         accessToken, accessTokenSecret = handler.get_access_token(oauthVerifier)
         handler.set_access_token(accessToken, accessTokenSecret)
         
+        # Construct a new API object using the finished handler.
         api = tweepy.API(handler)
 
-        with open("serializedAPI.txt", "xb") as tokenFile:
+        # Serialize and write the API to a text file.
+        with open("twitterAPISerial.txt", "xb") as tokenFile:
             tokenFile.write(pickle.dumps(api))   
     return api
 
-# Initialize/Read the serialized API.
-api = CreateTwitterAPI()
+def CreateInstagramAPI(username, password):
+
+    # Check if a seralized API exists to avoid re-logging in.
+    if (exists('instagramAPISerial.txt')):
+            with open("instagramAPISerial.txt", "rb") as tokenFile:
+                apiSerialized = tokenFile.read()
+                api = pickle.loads(apiSerialized)
+    else:
+        # Create a new API object and sign in if an existing one is not found.
+
+        
+        # Serialize the API and write the bytes to a text file.
+        #with open("instagramAPISerial.txt", "xb") as tokenFile:
+        #    tokenFile.write(pickle.dumps(api)) 
+
+# Initialize/Read the serialized API. 
+#tAPI = CreateTwitterAPI('', '')
+# Create instagram api object here
+
+# Post an image here to instagram
+#with open("TestImage.png", "rb") as image:
+#    image = image.read()
+    
+
 
 
 # Current Flow:
+# Twitter:
 # 1. Twitter Auth Page Redirects
 # 2. Socket server catches request with parameters
-# 3. Split recieved variables into independent
-# 4. Relearn wtf I'm doing with the OAuth token stuff???
+# 3. Split recieved variables into independent vars
+# 4. Generate a new access token
+# 5. Serialize the API object for future use
+# 6. Profit
+# Instagram:
+# 1. I got no clue yet
 
 # CURRENTLY
-# 1. Implement token persistence
+# 1. Implement instagram API
 # 2. Implement other APIs
