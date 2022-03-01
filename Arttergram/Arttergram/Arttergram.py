@@ -3,7 +3,10 @@ from os.path import exists
 import pickle
 import tweepy
 import webbrowser
-import socket
+import socket, ssl, requests
+import random
+import string
+import time
 
 # Tweepy Setup
 def CreateTwitterAPI(consumerKey, consumerSecret):
@@ -81,23 +84,55 @@ def CreateTwitterAPI(consumerKey, consumerSecret):
             tokenFile.write(pickle.dumps(api))   
     return api
 
-def CreateInstagramAPI(username, password):
+def CreateInstagramAPI():
 
     # Check if a seralized API exists to avoid re-logging in.
-    if (exists('instagramAPISerial.txt')):
-            with open("instagramAPISerial.txt", "rb") as tokenFile:
-                apiSerialized = tokenFile.read()
-                api = pickle.loads(apiSerialized)
-    else:
+#    if (exists('instagramAPISerial.txt')):
+#            with open("instagramAPISerial.txt", "rb") as tokenFile:
+#                apiSerialized = tokenFile.read()
+#                api = pickle.loads(apiSerialized)
+#    else:
         # Create a new API object and sign in if an existing one is not found.
-
+    
+        response = requests.post('https://graph.facebook.com/v2.6/device/login?access_token=<TOKEN>&scope=instagram_basic,pages_show_list')
         
+        #print(response.content.decode().split('"'))
+
+        # Take and save the necessary information from the request.
+        code = response.content.decode().split('"')[3]
+        userCode = response.content.decode().split('"')[7]
+        authuri = response.content.decode().split('"')[11]
+        expiration = response.content.decode().split('"')[14]
+        expirationInterval = int(response.content.decode().split('"')[16])
+
+        print("Please navigate to the below and enter the following authorization code: " + userCode + '\n')
+        print(authuri.replace("\\", ""))
+
+        while (True):
+            time.sleep(expirationInterval)
+            authStatus = requests.post("https://graph.facebook.com/v2.6/device/login_status")
+
+    
+        #keyString = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(11))
+        #digit = ''.join(random.choice(string.digits) for _ in range(9))
+        #webbrowser.open("https://www.facebook.com/v13.0/dialog/oauth?client_id={501319271390126}&state={{st=%s,ds=%s}}" % (keyString, digit))
+        
+        
+
+        # Create SSL socket
+        #sslWrapper = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+        #socObj = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #socketServer = sslWrapper.wrap_socket(socObj, server_hostname="127.0.0.1")
+        #socketServer.connect(("127.0.0.1", 5656))
+
+
         # Serialize the API and write the bytes to a text file.
         #with open("instagramAPISerial.txt", "xb") as tokenFile:
         #    tokenFile.write(pickle.dumps(api)) 
 
-# Initialize/Read the serialized API. 
-#tAPI = CreateTwitterAPI('', '')
+# Initialize/Read the serialized API.  
+#tAPI = CreateTwitterAPI('')
+CreateInstagramAPI()
 # Create instagram api object here
 
 # Post an image here to instagram
