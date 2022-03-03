@@ -4,9 +4,9 @@ import pickle
 import tweepy
 import webbrowser
 import socket, ssl, requests
-import random
-import string
 import time
+import string
+import datetime
 
 # Tweepy Setup
 def CreateTwitterAPI(consumerKey, consumerSecret):
@@ -84,7 +84,7 @@ def CreateTwitterAPI(consumerKey, consumerSecret):
             tokenFile.write(pickle.dumps(api))   
     return api
 
-def CreateInstagramAPI():
+def CreateInstagramAPI(clientAuth):
 
     # Check if a seralized API exists to avoid re-logging in.
 #    if (exists('instagramAPISerial.txt')):
@@ -94,30 +94,59 @@ def CreateInstagramAPI():
 #    else:
         # Create a new API object and sign in if an existing one is not found.
     
-        response = requests.post('https://graph.facebook.com/v2.6/device/login?access_token=<TOKEN>&scope=instagram_basic,pages_show_list')
+        # Request authentication data.
+        response = requests.post('https://graph.facebook.com/v2.6/device/login?access_token=%s&scope=pages_show_list,public_profile,instagram_basic,pages_read_engagement,instagram_basic' % clientAuth)
         
-        #print(response.content.decode().split('"'))
-
         # Take and save the necessary information from the request.
-        code = response.content.decode().split('"')[3]
-        userCode = response.content.decode().split('"')[7]
-        authuri = response.content.decode().split('"')[11]
-        expiration = response.content.decode().split('"')[14]
-        expirationInterval = int(response.content.decode().split('"')[16])
+        brokenCode = response.content.decode().split('"')
+        code = brokenCode[3]
+        userCode = brokenCode[7]
+        authuri = brokenCode[11]
+        expiration = brokenCode[14]
+        expirationInterval = int((brokenCode[16])[1])
 
+        # Tell user to enter code
+        # !! IMPLEMENT LOGIN METHOD?
         print("Please navigate to the below and enter the following authorization code: " + userCode + '\n')
-        print(authuri.replace("\\", ""))
+        print(authuri.replace("\\", "") + "/")
 
+        # Declare access token and expirary time.
+        accessToken = ''
+        accessTokenExpirationTime = 0
+
+        # Poll for access granted by user, then store the token and time remaining.
         while (True):
+            # Wait to avoid over-polling status.
             time.sleep(expirationInterval)
-            authStatus = requests.post("https://graph.facebook.com/v2.6/device/login_status")
 
-    
-        #keyString = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(11))
-        #digit = ''.join(random.choice(string.digits) for _ in range(9))
-        #webbrowser.open("https://www.facebook.com/v13.0/dialog/oauth?client_id={501319271390126}&state={{st=%s,ds=%s}}" % (keyString, digit))
+            # Make request to check status.
+            authStatus = requests.post("https://graph.facebook.com/v2.6/device/login_status?access_token=%s&code=%s" % (clientAuth, code)).content.decode().split('"')
+            print(authStatus)
+
+            # Check if status succeeded.
+            if (authStatus[1] == "access_token"):
+                accessToken = authStatus[3] # Store the access token.
+                accessTokenExpirationTime = int((authStatus[8])[1:len(authStatus[8]) - 2]) # Store the token expirary.
+                break
+            elif (authStatus[7] == ":463" or authStatus == ":17"): # Check if code entry expired.
+                print("Code expired, reattempt authentication from step 1!")
         
+        print(accessToken) # Access token.
+        # !! IMPLEMENT TOKEN EXPIRATION CHECKING
+        print(accessTokenExpirationTime) # Seconds remaining until token expires.
         
+        # Store user profile basics for display.
+        instagramProfile = requests.get("https://graph.facebook.com/v2.3/me?fieldsname=name,picture&access_token=%s" % accessToken)
+        print(instagramProfile.content.decode())
+        print(instagramProfile)
+
+
+        # !!! FIX BROKEN PERMISSIONS, ERROR 200
+        # Request the Facebook account profile.
+        instagramProfileEndpoint = requests.get("https://graph.facebook.com/v13.0/%s/accounts?access_token=%s" % (instagramProfile.content.decode().split('"')[7], accessToken))
+        print(instagramProfileEndpoint.content.decode())
+
+        # !! IMPLEMENT GETTING CORRECT CREATOR ACCOUNT
 
         # Create SSL socket
         #sslWrapper = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
