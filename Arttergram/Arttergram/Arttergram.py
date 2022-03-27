@@ -95,7 +95,7 @@ def CreateInstagramAPI(clientAuth):
         # Create a new API object and sign in if an existing one is not found.
     
         # Request authentication data.
-        response = requests.post('https://graph.facebook.com/v2.6/device/login?access_token=%s&scope=pages_show_list,public_profile,instagram_basic,pages_read_engagement,instagram_basic' % clientAuth)
+        response = requests.post('https://graph.facebook.com/v2.6/device/login?access_token=%s&scope=instagram_basic,instagram_content_publish,instagram_manage_comments,instagram_manage_insights,pages_show_list,pages_read_engagement' % clientAuth)
         
         # Take and save the necessary information from the request.
         brokenCode = response.content.decode().split('"')
@@ -131,7 +131,8 @@ def CreateInstagramAPI(clientAuth):
             elif (authStatus[7] == ":463" or authStatus == ":17"): # Check if code entry expired.
                 print("Code expired, reattempt authentication from step 1!")
         
-        print(accessToken) # Access token.
+        #print("access token")
+        #print(accessToken) # Access token.
         # !! IMPLEMENT TOKEN EXPIRATION CHECKING
         print(accessTokenExpirationTime) # Seconds remaining until token expires.
         
@@ -139,12 +140,13 @@ def CreateInstagramAPI(clientAuth):
         instagramProfile = requests.get("https://graph.facebook.com/v2.3/me?fieldsname=name,picture&access_token=%s" % accessToken)
         print(instagramProfile.content.decode())
         print(instagramProfile)
-
-
-        # !!! FIX BROKEN PERMISSIONS, ERROR 200
+        
         # Request the Facebook account profile.
-        instagramProfileEndpoint = requests.get("https://graph.facebook.com/v13.0/%s/accounts?access_token=%s" % (instagramProfile.content.decode().split('"')[7], accessToken))
+        instagramProfileEndpoint = requests.get("https://graph.facebook.com/v13.0/me/accounts?access_token=%s" % accessToken)
+        
+        #instagramProfileEndpoint = requests.get("https://graph.facebook.com/v13.0/%s/accounts?access_token=%s" % (instagramProfile.content.decode().split('"')[7], accessToken))
         print(instagramProfileEndpoint.content.decode())
+        print(instagramProfileEndpoint)
 
         # !! IMPLEMENT GETTING CORRECT CREATOR ACCOUNT
 
@@ -159,14 +161,17 @@ def CreateInstagramAPI(clientAuth):
         #with open("instagramAPISerial.txt", "xb") as tokenFile:
         #    tokenFile.write(pickle.dumps(api)) 
 
-# Initialize/Read the serialized API.  
-#tAPI = CreateTwitterAPI('')
-CreateInstagramAPI()
-# Create instagram api object here
+def main():
+    # Initialize/Read the serialized API.  
 
-# Post an image here to instagram
-#with open("TestImage.png", "rb") as image:
-#    image = image.read()
+    # Create instagram api object here
+
+    # Post an image here to instagram
+    #with open("TestImage.png", "rb") as image:
+    #    image = image.read()
+
+if __name__ == "__main__":
+    main()
     
 
 
