@@ -7,6 +7,35 @@ import socket, ssl, requests
 import time
 import string
 import datetime
+import json
+import cloudinary, cloudinary.api, cloudinary.uploader
+import subprocess # Used for getting HWID to slim down size used on image hosting server.
+
+# Upload 
+def GetUUID():
+    cmd = 'wmic csproduct get uuid'
+    uuid = str(subprocess.check_output(cmd))
+    pos1 = uuid.find("\\n")+2
+    uuid = uuid[pos1:-15]
+    return uuid
+
+# Given the path to an image, upload it and return the url it will be hosted at.
+def UploadImage(image):
+    # Config the cloudinary API handler
+    cloudinary.config( 
+      cloud_name = "arttergram", 
+      api_key = "885197691968175", 
+      api_secret = "9rBQhRwJNz2vfYYRFvwYh3yqoXM" 
+    )
+    
+    # Upload the image to the cloud, unique by the first 6 digits of the user PC's HWID to avoid
+    # spamming my image server to high hell and back.
+    uploadDetails = cloudinary.uploader.upload(
+        image,
+        public_id = GetUUID()[0:6])
+
+    # Return the URL to the uploaded image.
+    return uploadDetails['url']
 
 # Tweepy Setup
 def CreateTwitterAPI(consumerKey, consumerSecret):
@@ -95,15 +124,15 @@ def CreateInstagramAPI(clientAuth):
         # Create a new API object and sign in if an existing one is not found.
     
         # Request authentication data.
-        response = requests.post('https://graph.facebook.com/v2.6/device/login?access_token=%s&scope=instagram_basic,instagram_content_publish,instagram_manage_comments,instagram_manage_insights,pages_show_list,pages_read_engagement' % clientAuth)
-        
+        response = requests.post('https://graph.facebook.com/v2.6/device/login?access_token=%s&scope=instagram_basic,pages_show_list,pages_read_engagement' % clientAuth)
+        response = json.loads(response.content.decode())
+
         # Take and save the necessary information from the request.
-        brokenCode = response.content.decode().split('"')
-        code = brokenCode[3]
-        userCode = brokenCode[7]
-        authuri = brokenCode[11]
-        expiration = brokenCode[14]
-        expirationInterval = int((brokenCode[16])[1])
+        code = response.get("code")
+        userCode = response.get("user_code")
+        authuri = response.get("verification_uri")
+        expiration = response.get("expires_in")
+        expirationInterval = response.get("interval")
 
         # Tell user to enter code
         # !! IMPLEMENT LOGIN METHOD?
@@ -119,34 +148,37 @@ def CreateInstagramAPI(clientAuth):
             # Wait to avoid over-polling status.
             time.sleep(expirationInterval)
 
-            # Make request to check status.
-            authStatus = requests.post("https://graph.facebook.com/v2.6/device/login_status?access_token=%s&code=%s" % (clientAuth, code)).content.decode().split('"')
+            # Make request to check status, then convert to a dictionary
+            authStatus = requests.post("https://graph.facebook.com/v2.6/device/login_status?access_token=%s&code=%s" % (clientAuth, code)).content.decode()
+            authStatus = json.loads(authStatus)
+
             print(authStatus)
 
             # Check if status succeeded.
-            if (authStatus[1] == "access_token"):
-                accessToken = authStatus[3] # Store the access token.
-                accessTokenExpirationTime = int((authStatus[8])[1:len(authStatus[8]) - 2]) # Store the token expirary.
+            if ("access_token" in authStatus):
+                accessToken = authStatus.get("access_token") # Store the access token.
+                accessTokenExpirationTime = authStatus.get("expires_in") # Store the token expirary.
                 break
-            elif (authStatus[7] == ":463" or authStatus == ":17"): # Check if code entry expired.
+            elif (authStatus.get(code) == 463 or authStatus.get(code) == 17): # Check if code entry expired.
                 print("Code expired, reattempt authentication from step 1!")
         
-        #print("access token")
-        #print(accessToken) # Access token.
+        print(requests.get("https://graph.facebook.com/v2.3/me?fields=name,picture&access_token=%s" % accessToken))
         # !! IMPLEMENT TOKEN EXPIRATION CHECKING
-        print(accessTokenExpirationTime) # Seconds remaining until token expires.
+        #print(accessTokenExpirationTime) # Seconds remaining until token expires.
         
+        print(authStatus)
+        token = requests.post("https://api.instagram.com/oauth/access_token?client_id=")
+
         # Store user profile basics for display.
         instagramProfile = requests.get("https://graph.facebook.com/v2.3/me?fieldsname=name,picture&access_token=%s" % accessToken)
-        print(instagramProfile.content.decode())
-        print(instagramProfile)
-        
+        instagramProfile = json.loads(instagramProfile.content.decode())
+        print(instagramProfile.get("data"))
+
         # Request the Facebook account profile.
-        instagramProfileEndpoint = requests.get("https://graph.facebook.com/v13.0/me/accounts?access_token=%s" % accessToken)
+        instagramProfileEndpoint = requests.get("https://graph.facebook.com/v14.0/me/accounts?access_token=%s" % accessToken)
         
-        #instagramProfileEndpoint = requests.get("https://graph.facebook.com/v13.0/%s/accounts?access_token=%s" % (instagramProfile.content.decode().split('"')[7], accessToken))
-        print(instagramProfileEndpoint.content.decode())
-        print(instagramProfileEndpoint)
+        
+        
 
         # !! IMPLEMENT GETTING CORRECT CREATOR ACCOUNT
 
@@ -167,8 +199,8 @@ def main():
     # Create instagram api object here
 
     # Post an image here to instagram
-    #with open("TestImage.png", "rb") as image:
-    #    image = image.read()
+    #UploadImage("success.png")
+    print("end")
 
 if __name__ == "__main__":
     main()
